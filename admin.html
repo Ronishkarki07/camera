@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Camera Monitor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1a1a2e;
+            color: #e0e0e0;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+        .header h1 {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            color: white;
+            font-size: 28px;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #10b981;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        .stat-card {
+            background: #16213e;
+            padding: 20px;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+        .stat-label {
+            font-size: 12px;
+            color: #888;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+        .stat-value {
+            font-size: 28px;
+            font-weight: bold;
+            color: #667eea;
+        }
+        .feeds-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .feed-card {
+            background: #16213e;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            border: 2px solid #333;
+            transition: all 0.3s ease;
+        }
+        .feed-card:hover {
+            border-color: #667eea;
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.2);
+        }
+        .feed-video-container {
+            position: relative;
+            width: 100%;
+            padding-bottom: 75%;
+            background: #000;
+            overflow: hidden;
+        }
+        .feed-video-container canvas,
+        .feed-video-container video {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        .feed-info {
+            padding: 15px;
+            border-top: 1px solid #333;
+        }
+        .feed-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .feed-title {
+            font-weight: bold;
+            font-size: 16px;
+            color: #fff;
+        }
+        .feed-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: #888;
+        }
+        .feed-status .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #ef4444;
+        }
+        .feed-status.online .dot {
+            background: #10b981;
+            animation: pulse 1s infinite;
+        }
+        .feed-details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            font-size: 12px;
+            color: #888;
+        }
+        .detail-item {
+            display: flex;
+            justify-content: space-between;
+        }
+        .detail-value {
+            color: #667eea;
+            font-weight: 500;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #888;
+        }
+        .empty-state svg {
+            width: 80px;
+            height: 80px;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+        .empty-state p {
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+        .empty-state small {
+            display: block;
+            color: #666;
+        }
+        .server-control {
+            background: #16213e;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            border-left: 4px solid #764ba2;
+        }
+        .server-control h3 {
+            color: #fff;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .control-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        input {
+            padding: 10px;
+            background: #0f3460;
+            border: 1px solid #333;
+            border-radius: 5px;
+            color: #fff;
+            font-size: 14px;
+        }
+        input::placeholder {
+            color: #666;
+        }
+        button {
+            padding: 10px 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        button:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+        }
+        button.disconnect {
+            background: #f56565;
+        }
+        button.disconnect:hover {
+            background: #e53e3e;
+        }
+        .connection-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            padding: 10px 15px;
+            background: #0f3460;
+            border-radius: 5px;
+            min-width: 150px;
+        }
+        .connection-status .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #ef4444;
+        }
+        .connection-status.connected .dot {
+            background: #10b981;
+            animation: pulse 1s infinite;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>
+                <span class="status-indicator"></span>
+                Camera Admin Dashboard
+            </h1>
+        </div>
+
+        <div class="server-control">
+            <h3>⚙️ Server Connection</h3>
+            <div class="control-group">
+                <input type="text" id="serverUrl" placeholder="ws://localhost:8080" value="ws://localhost:8080">
+                <button onclick="connectToServer()">Connect</button>
+                <button class="disconnect" onclick="disconnectServer()">Disconnect</button>
+                <div class="connection-status" id="connectionStatus">
+                    <div class="dot"></div>
+                    <span id="connectionText">Not Connected</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-label">Active Cameras</div>
+                <div class="stat-value" id="activeCameras">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Total Frames</div>
+                <div class="stat-value" id="totalFrames">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Server Status</div>
+                <div class="stat-value" id="serverStatus">Offline</div>
+            </div>
+        </div>
+
+        <div id="feedsContainer" class="feeds-grid">
+            <div class="empty-state">
+                <p>🎥 No cameras connected</p>
+                <small>Waiting for camera feeds...</small>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let ws = null;
+        let feeds = new Map();
+        let totalFrames = 0;
+
+        // Connect to WebSocket server
+        function connectToServer() {
+            const serverUrl = document.getElementById('serverUrl').value;
+            
+            try {
+                ws = new WebSocket(serverUrl);
+                
+                ws.onopen = () => {
+                    console.log('Connected to server');
+                    updateConnectionStatus(true);
+                    document.getElementById('serverStatus').textContent = 'Online';
+                };
+                
+                ws.onmessage = (event) => {
+                    try {
+                        const data = JSON.parse(event.data);
+                        
+                        if (data.type === 'camera_feed') {
+                            updateFeed(data);
+                        } else if (data.type === 'camera_list') {
+                            updateCameraList(data.cameras);
+                        }
+                    } catch (e) {
+                        console.error('Error parsing message:', e);
+                    }
+                };
+                
+                ws.onerror = (error) => {
+                    console.error('WebSocket error:', error);
+                    updateConnectionStatus(false);
+                    document.getElementById('serverStatus').textContent = 'Error';
+                };
+                
+                ws.onclose = () => {
+                    console.log('Disconnected from server');
+                    updateConnectionStatus(false);
+                    document.getElementById('serverStatus').textContent = 'Offline';
+                };
+            } catch (error) {
+                console.error('Connection error:', error);
+                alert('Could not connect to server: ' + error.message);
+            }
+        }
+
+        // Disconnect from server
+        function disconnectServer() {
+            if (ws) {
+                ws.close();
+                ws = null;
+            }
+            updateConnectionStatus(false);
+        }
+
+        // Update connection status UI
+        function updateConnectionStatus(connected) {
+            const status = document.getElementById('connectionStatus');
+            const text = document.getElementById('connectionText');
+            
+            if (connected) {
+                status.classList.add('connected');
+                text.textContent = 'Connected';
+            } else {
+                status.classList.remove('connected');
+                text.textContent = 'Not Connected';
+            }
+        }
+
+        // Update feed display
+        function updateFeed(data) {
+            const feedId = data.cameraId;
+            
+            if (!feeds.has(feedId)) {
+                feeds.set(feedId, {
+                    id: feedId,
+                    name: data.cameraName || 'Camera ' + (feeds.size + 1),
+                    frames: 0,
+                    lastUpdate: Date.now()
+                });
+                renderFeeds();
+            }
+            
+            const feed = feeds.get(feedId);
+            feed.lastUpdate = Date.now();
+            feed.frames++;
+            totalFrames++;
+            
+            // Update feed video
+            const videoElement = document.getElementById(`video-${feedId}`);
+            if (videoElement && data.frame) {
+                videoElement.src = data.frame;
+            }
+            
+            updateStats();
+        }
+
+        // Update camera list
+        function updateCameraList(cameras) {
+            cameras.forEach(camera => {
+                if (!feeds.has(camera.id)) {
+                    feeds.set(camera.id, {
+                        id: camera.id,
+                        name: camera.name,
+                        frames: 0,
+                        lastUpdate: Date.now(),
+                        resolution: camera.resolution,
+                        deviceId: camera.deviceId
+                    });
+                }
+            });
+            renderFeeds();
+            updateStats();
+        }
+
+        // Render feeds
+        function renderFeeds() {
+            const container = document.getElementById('feedsContainer');
+            
+            if (feeds.size === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <p>🎥 No cameras connected</p>
+                        <small>Waiting for camera feeds...</small>
+                    </div>
+                `;
+                return;
+            }
+            
+            let html = '';
+            feeds.forEach((feed, id) => {
+                const isOnline = Date.now() - feed.lastUpdate < 5000;
+                html += `
+                    <div class="feed-card">
+                        <div class="feed-video-container">
+                            <img id="video-${id}" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Crect fill='%23333' width='100' height='100'/%3E%3Ctext x='50' y='50' font-size='14' fill='%23666' text-anchor='middle' dy='.3em'%3EWaiting...%3C/text%3E%3C/svg%3E" style="width: 100%; height: 100%; object-fit: cover;">
+                        </div>
+                        <div class="feed-info">
+                            <div class="feed-header">
+                                <div class="feed-title">${feed.name}</div>
+                                <div class="feed-status ${isOnline ? 'online' : 'offline'}">
+                                    <div class="dot"></div>
+                                    <span>${isOnline ? 'Online' : 'Offline'}</span>
+                                </div>
+                            </div>
+                            <div class="feed-details">
+                                <div class="detail-item">
+                                    <span>Frames Received:</span>
+                                    <span class="detail-value">${feed.frames}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <span>Last Update:</span>
+                                    <span class="detail-value">${formatTime(Date.now() - feed.lastUpdate)}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <span>Camera ID:</span>
+                                    <span class="detail-value">${feed.id.substring(0, 8)}...</span>
+                                </div>
+                                <div class="detail-item">
+                                    <span>Resolution:</span>
+                                    <span class="detail-value">${feed.resolution || 'N/A'}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        }
+
+        // Update statistics
+        function updateStats() {
+            document.getElementById('activeCameras').textContent = feeds.size;
+            document.getElementById('totalFrames').textContent = totalFrames;
+        }
+
+        // Format time difference
+        function formatTime(ms) {
+            if (ms < 1000) return 'just now';
+            const seconds = Math.floor(ms / 1000);
+            if (seconds < 60) return seconds + 's ago';
+            const minutes = Math.floor(seconds / 60);
+            if (minutes < 60) return minutes + 'm ago';
+            return Math.floor(minutes / 60) + 'h ago';
+        }
+
+        // Auto-refresh stats
+        setInterval(() => {
+            updateStats();
+            renderFeeds();
+        }, 1000);
+    </script>
+</body>
+</html>

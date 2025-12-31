@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Camera App</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            max-width: 600px;
+            width: 100%;
+            padding: 30px;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+        }
+        .camera-section {
+            display: none;
+        }
+        .camera-section.active {
+            display: block;
+        }
+        video, canvas {
+            width: 100%;
+            border-radius: 10px;
+            margin: 20px 0;
+            background: #000;
+            display: block;
+        }
+        canvas {
+            display: none;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        button {
+            flex: 1;
+            padding: 12px 20px;
+            font-size: 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            min-width: 120px;
+        }
+        .btn-primary {
+            background-color: #667eea;
+            color: white;
+        }
+        .btn-primary:hover {
+            background-color: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        .btn-danger {
+            background-color: #f56565;
+            color: white;
+        }
+        .btn-danger:hover {
+            background-color: #e53e3e;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(245, 101, 101, 0.4);
+        }
+        .btn-success {
+            background-color: #48bb78;
+            color: white;
+        }
+        .btn-success:hover {
+            background-color: #38a169;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(72, 187, 120, 0.4);
+        }
+        .btn-secondary {
+            background-color: #cbd5e0;
+            color: #333;
+        }
+        .btn-secondary:hover {
+            background-color: #a0aec0;
+            transform: translateY(-2px);
+        }
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .camera-selector {
+            margin: 20px 0;
+        }
+        select {
+            width: 100%;
+            padding: 10px;
+            font-size: 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        .preview-section {
+            display: none;
+            text-align: center;
+        }
+        .preview-section.active {
+            display: block;
+        }
+        .preview-section img {
+            max-width: 100%;
+            border-radius: 10px;
+            margin: 20px 0;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        .status {
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            text-align: center;
+            display: none;
+            font-weight: 600;
+        }
+        .status.show {
+            display: block;
+        }
+        .status.success {
+            background-color: #c6f6d5;
+            color: #22543d;
+            border: 2px solid #9ae6b4;
+        }
+        .status.error {
+            background-color: #fed7d7;
+            color: #742a2a;
+            border: 2px solid #fc8181;
+        }
+        .permissions-section {
+            text-align: center;
+            padding: 40px 20px;
+        }
+        .permissions-section p {
+            color: #666;
+            margin-bottom: 20px;
+            font-size: 18px;
+        }
+        .icon {
+            font-size: 60px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📷 Camera App</h1>
+        
+        <!-- Permissions Section -->
+        <div id="permissionsSection" class="permissions-section">
+            <div class="icon">🎥</div>
+            <p>Click the button below to access your camera</p>
+            <button class="btn-primary" onclick="requestCameraAccess()" style="width: 100%; padding: 15px;">
+                Enable Camera Access
+            </button>
+        </div>
+
+        <!-- Camera Section -->
+        <div id="cameraSection" class="camera-section">
+            <div class="camera-selector">
+                <label for="cameraSelect"><strong>Select Camera:</strong></label>
+                <select id="cameraSelect" onchange="switchCamera()"></select>
+            </div>
+
+            <video id="video" autoplay playsinline></video>
+
+            <div class="button-group">
+                <button class="btn-primary" onclick="takePhoto()">📸 Take Photo</button>
+                <button class="btn-danger" onclick="stopCamera()">Stop</button>
+            </div>
+
+            <div id="status" class="status"></div>
+        </div>
+
+        <!-- Preview Section -->
+        <div id="previewSection" class="preview-section">
+            <h2>Photo Preview</h2>
+            <img id="photoPreview" alt="Preview">
+            
+            <div class="button-group">
+                <button class="btn-success" onclick="downloadPhoto()">⬇️ Download</button>
+                <button class="btn-secondary" onclick="sharePhoto()">📤 Share</button>
+                <button class="btn-primary" onclick="retakPhoto()">🔄 Retake</button>
+            </div>
+        </div>
+
+        <canvas id="canvas"></canvas>
+    </div>
+
+    <script>
+        let stream = null;
+        let devices = [];
+        let photoData = null;
+        let ws = null;
+        let cameraId = null;
+        let frameInterval = null;
+
+        // Request camera access
+        async function requestCameraAccess() {
+            try {
+                const constraints = {
+                    video: { facingMode: 'user' }
+                };
+                
+                stream = await navigator.mediaDevices.getUserMedia(constraints);
+                cameraId = 'camera_' + Math.random().toString(36).substr(2, 9);
+                
+                document.getElementById('permissionsSection').style.display = 'none';
+                document.getElementById('cameraSection').classList.add('active');
+                
+                const video = document.getElementById('video');
+                video.srcObject = stream;
+                
+                await listCameras();
+                connectWebSocket();
+                startStreamingFrames();
+                showStatus('Camera access granted!', 'success');
+            } catch (error) {
+                console.error('Error accessing camera:', error);
+                showStatus('Could not access camera. Please check permissions.', 'error');
+            }
+        }
+
+        // Connect to WebSocket server
+        function connectWebSocket() {
+            try {
+                ws = new WebSocket('ws://localhost:8080');
+                
+                ws.onopen = () => {
+                    console.log('Connected to server');
+                    ws.send(JSON.stringify({
+                        type: 'register_camera',
+                        cameraId: cameraId,
+                        cameraName: 'Camera ' + (Array.from(devices).findIndex(d => d.deviceId === document.getElementById('cameraSelect').value) + 1),
+                        deviceId: document.getElementById('cameraSelect').value,
+                        resolution: '1280x720'
+                    }));
+                    showStatus('Connected to admin server', 'success');
+                };
+                
+                ws.onerror = (error) => {
+                    console.error('WebSocket error:', error);
+                    showStatus('Could not connect to server (optional)', 'error');
+                };
+                
+                ws.onclose = () => {
+                    console.log('Disconnected from server');
+                };
+            } catch (error) {
+                console.error('WebSocket connection error:', error);
+            }
+        }
+
+        // Start streaming frames to server
+        function startStreamingFrames() {
+            const video = document.getElementById('video');
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            
+            canvas.width = 320;
+            canvas.height = 240;
+            
+            frameInterval = setInterval(() => {
+                if (stream && ws && ws.readyState === WebSocket.OPEN) {
+                    try {
+                        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                        const frame = canvas.toDataURL('image/jpeg', 0.6);
+                        
+                        ws.send(JSON.stringify({
+                            type: 'camera_feed',
+                            cameraId: cameraId,
+                            cameraName: 'Camera ' + (Array.from(devices).findIndex(d => d.deviceId === document.getElementById('cameraSelect').value) + 1),
+                            frame: frame,
+                            timestamp: Date.now()
+                        }));
+                    } catch (error) {
+                        console.error('Error streaming frame:', error);
+                    }
+                }
+            }, 500); // Send frames every 500ms
+        }
+
+        // List available cameras
+        async function listCameras() {
+            try {
+                const deviceList = await navigator.mediaDevices.enumerateDevices();
+                devices = deviceList.filter(device => device.kind === 'videoinput');
+                
+                const select = document.getElementById('cameraSelect');
+                select.innerHTML = '';
+                
+                devices.forEach((device, index) => {
+                    const option = document.createElement('option');
+                    option.value = device.deviceId;
+                    option.text = device.label || `Camera ${index + 1}`;
+                    select.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error listing cameras:', error);
+            }
+        }
+
+        // Switch camera
+        async function switchCamera() {
+            try {
+                const select = document.getElementById('cameraSelect');
+                const selectedDeviceId = select.value;
+                
+                // Stop current stream
+                if (stream) {
+                    stream.getTracks().forEach(track => track.stop());
+                }
+                
+                // Start new stream with selected camera
+                const constraints = {
+                    video: {
+                        deviceId: selectedDeviceId ? { exact: selectedDeviceId } : undefined
+                    }
+                };
+                
+                stream = await navigator.mediaDevices.getUserMedia(constraints);
+                const video = document.getElementById('video');
+                video.srcObject = stream;
+                
+                showStatus('Camera switched!', 'success');
+            } catch (error) {
+                console.error('Error switching camera:', error);
+                showStatus('Could not switch camera.', 'error');
+            }
+        }
+
+        // Take photo
+        function takePhoto() {
+            const video = document.getElementById('video');
+            const canvas = document.getElementById('canvas');
+            const context = canvas.getContext('2d');
+
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            context.drawImage(video, 0, 0);
+
+            // Convert to image data
+            photoData = canvas.toDataURL('image/png');
+            
+            // Show preview
+            document.getElementById('photoPreview').src = photoData;
+            document.getElementById('cameraSection').classList.remove('active');
+            document.getElementById('previewSection').classList.add('active');
+            
+            showStatus('Photo captured!', 'success');
+        }
+
+        // Download photo
+        function downloadPhoto() {
+            if (photoData) {
+                const a = document.createElement('a');
+                a.href = photoData;
+                a.download = `photo_${Date.now()}.png`;
+                a.click();
+                showStatus('Photo downloaded!', 'success');
+            }
+        }
+
+        // Share photo (Web Share API)
+        async function sharePhoto() {
+            if (!photoData) return;
+            
+            try {
+                const blob = await (await fetch(photoData)).blob();
+                const file = new File([blob], `photo_${Date.now()}.png`, { type: 'image/png' });
+                
+                if (navigator.share) {
+                    await navigator.share({
+                        title: 'My Photo',
+                        text: 'Check out my photo!',
+                        files: [file]
+                    });
+                    showStatus('Photo shared!', 'success');
+                } else {
+                    showStatus('Web Share not supported on this device.', 'error');
+                }
+            } catch (error) {
+                console.error('Error sharing:', error);
+                showStatus('Could not share photo.', 'error');
+            }
+        }
+
+        // Retake photo
+        function retakPhoto() {
+            document.getElementById('previewSection').classList.remove('active');
+            document.getElementById('cameraSection').classList.add('active');
+            photoData = null;
+        }
+
+        // Stop camera
+        function stopCamera() {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                stream = null;
+            }
+            if (frameInterval) {
+                clearInterval(frameInterval);
+                frameInterval = null;
+            }
+            if (ws) {
+                ws.close();
+                ws = null;
+            }
+            document.getElementById('cameraSection').classList.remove('active');
+            document.getElementById('permissionsSection').style.display = 'block';
+        }
+
+        // Show status message
+        function showStatus(message, type) {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = `status show ${type}`;
+            
+            setTimeout(() => {
+                status.classList.remove('show');
+            }, 3000);
+        }
+
+        // Initialize
+        window.addEventListener('load', () => {
+            // Request permissions on load for better UX
+            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                console.log('Camera API available');
+            } else {
+                showStatus('Camera API not supported on this device.', 'error');
+            }
+        });
+    </script>
+</body>
+</html>
