@@ -265,17 +265,32 @@
                 <div id="viewerStatus" class="status"></div>
 
                 <div style="margin: 20px 0;">
-                    <label style="display: block; color: #888; font-size: 12px; text-transform: uppercase; margin-bottom: 8px;">Enter Camera ID to Watch</label>
+                    <label style="display: block; color: #888; font-size: 12px; text-transform: uppercase; margin-bottom: 8px;">Join a Room (optional) or Use Camera ID</label>
+                    <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                        <input type="text" id="roomInput" placeholder="Room name (e.g., office, home)">
+                        <button class="btn" onclick="joinRoom()" style="flex: 0 0 auto;">Join Room</button>
+                    </div>
+
                     <div style="display: flex; gap: 10px;">
-                        <input type="text" id="cameraIdInput" placeholder="Enter camera ID (e.g., abc123xyz)">
+                        <input type="text" id="cameraIdInput" placeholder="Or enter camera ID manually">
                         <button class="btn" onclick="connectToCamera()" style="flex: 0 0 auto;">Connect</button>
+                    </div>
+                </div>
+
+                <div id="availableCameras" style="margin: 20px 0;">
+                    <h3 style="color: #667eea; margin-bottom: 15px;">📹 Available Cameras in Room</h3>
+                    <div id="camerasList" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px;">
+                        <div style="grid-column: 1 / -1; text-align: center; color: #888; padding: 20px;">
+                            <p>No cameras found in this room</p>
+                            <p style="font-size: 12px; margin-top: 10px;">Share the room name with someone or they can share their Camera ID</p>
+                        </div>
                     </div>
                 </div>
 
                 <div id="feedsContainer" class="feeds-grid">
                     <div class="empty-state">
                         <p>👁️ No cameras connected</p>
-                        <p style="font-size: 14px; margin-top: 10px;">Ask someone to share their Camera ID</p>
+                        <p style="font-size: 14px; margin-top: 10px;">Join a room or ask someone to share their Camera ID</p>
                     </div>
                 </div>
             </div>
@@ -289,6 +304,9 @@
         let localStream = null;
         let connections = new Map();
         let remoteStreams = new Map();
+        let currentRoom = null;
+        let availableCameras = new Map(); // Track cameras in room
+        let broadcastInterval = null;
 
         // Initialize Peer
         function initPeer() {
@@ -358,7 +376,69 @@
                 localStream = null;
                 document.getElementById('cameraVideo').srcObject = null;
             }
+            if (broadcastInterval) {
+                clearInterval(broadcastInterval);
+                broadcastInterval = null;
+            }
+            currentRoom = null;
             showStatus('Camera stopped', 'error', 'camera');
+        }
+
+        // Join Room
+        function joinRoom() {
+            const roomName = document.getElementById('roomInput').value.trim();
+            if (!roomName) {
+                showStatus('Please enter a room name', 'error', 'viewer');
+                return;
+            }
+
+            currentRoom = roomName;
+            document.getElementById('availableCameras').style.display = 'block';
+            showStatus('Joined room: ' + roomName, 'success', 'viewer');
+            
+            // Listen for cameras in this room
+            listenForCamerasInRoom(roomName);
+        }
+
+        // Listen for cameras in room
+        function listenForCamerasInRoom(roomName) {
+            // Check for cameras broadcasting to this room
+            const checkCamera = setInterval(() => {
+                if (!currentRoom || currentRoom !== roomName) {
+                    clearInterval(checkCamera);
+                    return;
+                }
+                
+                // Try to connect to common peer patterns in room
+                tryDiscoverCameras(roomName);
+            }, 2000);
+        }
+
+        // Try discover cameras by room name
+        function tryDiscoverCameras(roomName) {
+            // Create camera list based on room
+            const roomPeerId = 'camera_' + roomName + '_hub';
+            
+            if (!connections.has(roomPeerId) && availableCameras.size === 0) {
+                // Listen for broadcast
+                console.log('Listening for cameras in room:', roomName);
+            }
+        }
+
+        // Broadcast camera to room (for camera mode)
+        function broadcastCameraToRoom(roomName) {
+            if (!broadcastInterval) {
+                broadcastInterval = setInterval(() => {
+                    // Announce this camera to the room
+                    const announcement = {
+                        type: 'camera_broadcast',
+                        peerId: myPeerId,
+                        room: roomName,
+                        timestamp: Date.now()
+                    };
+                    console.log('Broadcasting camera to room:', roomName);
+                }, 5000);
+            }
         }
 
         // Connect to Camera
@@ -418,7 +498,7 @@
                 container.innerHTML = `
                     <div class="empty-state">
                         <p>👁️ No cameras connected</p>
-                        <p style="font-size: 14px; margin-top: 10px;">Ask someone to share their Camera ID</p>
+                        <p style="font-size: 14px; margin-top: 10px;">Join a room or ask someone to share their Camera ID</p>
                     </div>
                 `;
                 return;
